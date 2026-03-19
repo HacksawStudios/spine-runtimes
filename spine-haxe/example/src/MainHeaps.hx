@@ -1,4 +1,4 @@
-/****************************************************************************
+/******************************************************************************
  * Spine Runtimes License Agreement
  * Last updated April 5, 2025. Replaces all prior versions.
  *
@@ -27,29 +27,30 @@
  * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-package heapsExamples;
+package;
 
-import spine.SkeletonData;
-import spine.heaps.HeapsTextureLoader;
-import spine.heaps.SkeletonMesh;
-import spine.heaps.SkeletonRenderer;
+import heapsExamples.BasicExample;
+import heapsExamples.Scene.SceneManager;
 
-class CompileSmoke {
-	public static function main():Void {
-		var loader = new HeapsTextureLoader("assets/example.atlas", function(_) return null, function(_) {});
-		var skeletonData:SkeletonData = null;
-		var renderer:SkeletonRenderer = null;
-		var slotMesh:SkeletonMesh = null;
+class MainHeaps extends hxd.App {
+	override function init():Void {
+		engine.backgroundColor = 0xFF000000;
+		SceneManager.initialize(this);
+		SceneManager.getInstance().switchScene(new BasicExample());
+	}
 
-		trace(loader != null);
-		if (renderer != null) {
-			renderer.refresh();
-			renderer.setColor(1, 1, 1, 1);
-			renderer.setBlendModeOverride(null);
-		}
-		if (slotMesh != null) {
-			slotMesh.hide();
-		}
-		trace(skeletonData == null);
+	override function update(dt:Float):Void {
+		super.update(dt);
+		SceneManager.getInstance().update(dt);
+	}
+
+	override function onResize():Void {
+		super.onResize();
+		SceneManager.getInstance().resize();
+	}
+
+	static function main():Void {
+		hxd.Res.initEmbed();
+		new MainHeaps();
 	}
 }

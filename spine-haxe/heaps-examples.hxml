@@ -1,0 +1,6 @@
+-cp spine-haxe
+-cp example/src
+-lib heaps
+-main MainHeaps
+-D resourcesPath=example
+-js export/heaps/MainHeaps.js
