@@ -33,10 +33,12 @@ import heapsExamples.BasicExample;
 import heapsExamples.Scene.SceneManager;
 
 class MainHeaps extends hxd.App {
+
 	override function init():Void {
 		engine.backgroundColor = 0xFF000000;
 		SceneManager.initialize(this);
 		SceneManager.getInstance().switchScene(new BasicExample());
+		notifyReady();
 	}
 
 	override function update(dt:Float):Void {
@@ -52,5 +54,13 @@ class MainHeaps extends hxd.App {
 	static function main():Void {
 		hxd.Res.initEmbed();
 		new MainHeaps();
+	}
+
+	private static function notifyReady():Void {
+		#if js
+		var window = js.Browser.window;
+		if (window != null)
+			window.dispatchEvent(new js.html.Event("spine-heaps-ready"));
+		#end
 	}
 }

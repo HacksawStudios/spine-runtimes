@@ -114,7 +114,7 @@ class Scene {
 	private var animatedRenderers:Array<SkeletonRenderer> = [];
 
 	public function new() {
-		Bone.yDown = true;
+		Bone.yDown = false;
 		manager = SceneManager.getInstance();
 		world = new H3dObject(manager.app.s3d);
 		var uiRoot = new H2dObject(manager.app.s2d);
@@ -126,6 +126,7 @@ class Scene {
 		screen.onMove = onScreenMove;
 		screen.onRelease = onScreenRelease;
 		screen.onClick = onScreenClick;
+		configureCamera();
 	}
 
 	public var app(get, never):MainHeaps;
@@ -154,6 +155,7 @@ class Scene {
 	}
 
 	public function onResize():Void {
+		configureCamera();
 		screen.width = app.engine.width;
 		screen.height = app.engine.height;
 		redrawBackground();
@@ -208,37 +210,12 @@ class Scene {
 			animatedRenderers.push(renderer);
 	}
 
-	public function placeRendererCenter(renderer:SkeletonRenderer, centerX:Float, centerY:Float, maxWidth:Float, maxHeight:Float,
-			scaleMultiplier:Float = 1.0):Void {
-		var bounds = getRenderableBounds(renderer);
-		var scale = fitBounds(bounds, maxWidth, maxHeight) * scaleMultiplier;
-		var center = bounds.getCenter();
-		renderer.object.scaleX = scale;
-		renderer.object.scaleY = scale;
-		renderer.object.setPosition(centerX - center.x * scale, centerY - center.y * scale, 0);
-	}
-
-	public function placeRendererBottomCenter(renderer:SkeletonRenderer, centerX:Float, bottomY:Float, maxWidth:Float, maxHeight:Float,
-			scaleMultiplier:Float = 1.0):Void {
-		var bounds = getRenderableBounds(renderer);
-		var scale = fitBounds(bounds, maxWidth, maxHeight) * scaleMultiplier;
-		var center = bounds.getCenter();
-		renderer.object.scaleX = scale;
-		renderer.object.scaleY = scale;
-		renderer.object.setPosition(centerX - center.x * scale, bottomY - bounds.yMax * scale, 0);
-	}
-
 	public function worldToScreen(x:Float, y:Float, z:Float = 0):Point {
-		app.s3d.camera.update();
-		var projected = app.s3d.camera.project(x, y, z, app.engine.width, app.engine.height, false);
-		return new Point(projected.x, projected.y, projected.z);
+		return new Point(x + app.engine.width * 0.5, app.engine.height * 0.5 - y, z);
 	}
 
 	public function screenToWorld(screenX:Float, screenY:Float, z:Float = 0):Point {
-		app.s3d.camera.update();
-		var ray = app.s3d.camera.rayFromScreen(screenX, screenY, app.engine.width, app.engine.height);
-		var intersection = ray.intersect(Plane.Z(z));
-		return intersection != null ? intersection : new Point(0, 0, z);
+		return new Point(screenX - app.engine.width * 0.5, app.engine.height * 0.5 - screenY, z);
 	}
 
 	public function rendererContainsScreenPoint(renderer:SkeletonRenderer, x:Float, y:Float):Bool {
@@ -313,32 +290,19 @@ class Scene {
 
 	private function redrawBackground():Void {
 		background.clear();
-		background.beginFill(backgroundColor, 1);
-		background.drawRect(0, 0, app.engine.width, app.engine.height);
-		background.endFill();
+		app.engine.backgroundColor = 0xFF000000 | backgroundColor;
 	}
 
-	private function getRenderableBounds(renderer:SkeletonRenderer):Bounds {
-		renderer.refresh();
-		var bounds = renderer.object.getBounds(null, renderer.object);
-		var width = bounds.xMax - bounds.xMin;
-		var height = bounds.yMax - bounds.yMin;
-		if (Math.isNaN(width) || Math.isNaN(height) || width <= 0.0001 || height <= 0.0001) {
-			bounds = new Bounds();
-			bounds.xMin = -renderer.logicalWidth * 0.5;
-			bounds.xMax = renderer.logicalWidth * 0.5;
-			bounds.yMin = -renderer.logicalHeight * 0.5;
-			bounds.yMax = renderer.logicalHeight * 0.5;
-			bounds.zMin = 0;
-			bounds.zMax = 0;
-		}
-		return bounds;
-	}
-
-	private function fitBounds(bounds:Bounds, maxWidth:Float, maxHeight:Float):Float {
-		var width = Math.max(0.0001, bounds.xMax - bounds.xMin);
-		var height = Math.max(0.0001, bounds.yMax - bounds.yMin);
-		return Math.min(maxWidth / width, maxHeight / height);
+	private function configureCamera():Void {
+		var camera = app.s3d.camera;
+		camera.pos.set(0.0, 0.0, 10.0);
+		camera.rightHanded = true;
+		camera.target.set(0.0, 0.0, 0.0);
+		camera.up.set(0.0, 1.0, 0.0);
+		camera.zNear = 0.01;
+		camera.zFar = 1000.0;
+		camera.orthoBounds = Bounds.fromValues(-app.engine.width * 0.5, -app.engine.height * 0.5, -10.0, app.engine.width, app.engine.height, 20.0);
+		camera.update();
 	}
 
 	private function projectBounds(bounds:Bounds):ScreenRect {

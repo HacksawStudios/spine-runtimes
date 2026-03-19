@@ -31,6 +31,7 @@ package spine.heaps;
 
 import h2d.BlendMode;
 import h2d.Tile;
+import h3d.mat.Data.Compare;
 import h3d.mat.Data.Face;
 import h3d.mat.Material;
 import h3d.scene.Mesh;
@@ -39,26 +40,29 @@ import spine.Color;
 
 /** A Heaps mesh that draws one Spine slot. */
 class SkeletonMesh extends Mesh {
-	private static inline var SLOT_Z_STEP:Float = 0.1;
-
 	private var geometry:SpineMeshPrimitive;
 	private var heapsMaterial:Material;
+	private var premultiplyAlphaShader:PremultiplyAlphaShader;
 
 	public function new(?parent:Object) {
 		geometry = new SpineMeshPrimitive();
 		heapsMaterial = h3d.mat.MaterialSetup.current.createMaterial();
+		heapsMaterial.mainPass.enableLights = false;
 		heapsMaterial.mainPass.depthWrite = false;
 		heapsMaterial.mainPass.culling = Face.None;
+		premultiplyAlphaShader = new PremultiplyAlphaShader();
 		super(geometry, heapsMaterial, parent);
 	}
 
 	public function setOrder(order:Int):Void {
-		z = order * SLOT_Z_STEP;
+		z = 0.0;
+		heapsMaterial.mainPass.layer = order;
 	}
 
 	public function apply(tile:Tile, vertices:Array<Float>, uvs:Array<Float>, indices:Array<Int>, slotBlendMode:spine.BlendMode,
 			blendModeOverride:Null<BlendMode>, color:Color):Void {
 		heapsMaterial.texture = tile.getTexture();
+		applyPremultiplyAlpha(slotBlendMode, blendModeOverride);
 		applyBlendMode(slotBlendMode, blendModeOverride);
 		heapsMaterial.color.set(color.r, color.g, color.b, color.a);
 		geometry.applyGeometry(vertices, uvs, indices);
@@ -74,11 +78,25 @@ class SkeletonMesh extends Mesh {
 		geometry.dispose();
 	}
 
+	private function applyPremultiplyAlpha(slotBlendMode:spine.BlendMode, blendModeOverride:Null<BlendMode>):Void {
+		final shouldPremultiply = blendModeOverride == null && slotBlendMode == spine.BlendMode.multiply;
+		final hasShader = heapsMaterial.mainPass.getShader(PremultiplyAlphaShader) != null;
+		if (shouldPremultiply && !hasShader)
+			heapsMaterial.mainPass.addShader(premultiplyAlphaShader);
+		else if (!shouldPremultiply && hasShader)
+			heapsMaterial.mainPass.removeShader(premultiplyAlphaShader);
+	}
+
 	private function applyBlendMode(slotBlendMode:spine.BlendMode, blendModeOverride:Null<BlendMode>):Void {
 		var pass = heapsMaterial.mainPass;
-		pass.depthWrite = false;
+		pass.depth(false, Compare.Always);
 		pass.setPassName("alpha");
-		pass.setBlendMode(blendModeOverride != null ? blendModeOverride : toBlendMode(slotBlendMode));
+		if (blendModeOverride != null) {
+			pass.setBlendMode(blendModeOverride);
+			return;
+		}
+
+		pass.setBlendMode(toBlendMode(slotBlendMode));
 	}
 
 	public static function toBlendMode(spineBlendMode:spine.BlendMode):BlendMode {
@@ -88,12 +106,22 @@ class SkeletonMesh extends Mesh {
 			case additive:
 				BlendMode.Add;
 			case multiply:
-				BlendMode.Multiply;
+				BlendMode.AlphaMultiply;
 			case screen:
 				BlendMode.Screen;
 			default:
 				BlendMode.Alpha;
 		};
+	}
+}
+
+private class PremultiplyAlphaShader extends hxsl.Shader {
+	static var SRC = {
+		var pixelColor:Vec4;
+
+		function fragment() {
+			pixelColor.rgb *= pixelColor.a;
+		}
 	}
 }
 

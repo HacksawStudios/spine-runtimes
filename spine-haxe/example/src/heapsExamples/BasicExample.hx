@@ -34,16 +34,22 @@ import spine.heaps.SkeletonRenderer;
 
 class BasicExample extends Scene {
 	private var skeletonRenderer:SkeletonRenderer;
+	private var layoutWidth = 1.0;
 
 	override public function load():Void {
 		skeletonRenderer = createSkeletonRenderer("assets/raptor.atlas", "assets/raptor-pro.skel");
+		layoutWidth = Math.max(1.0, skeletonRenderer.getBounds(false).width);
 		skeletonRenderer.stateData.defaultMix = 0.25;
 		skeletonRenderer.state.setAnimationByName(0, "walk", true);
 		addText("Click anywhere for next scene");
 	}
 
 	override public function layout():Void {
-		placeRendererBottomCenter(skeletonRenderer, app.engine.width * 0.5, app.engine.height * 0.9, app.engine.width * 0.5, app.engine.height * 0.7);
+		var scale = app.engine.width / layoutWidth * 0.5;
+		var position = screenToWorld(app.engine.width * 0.5, app.engine.height * 0.9, skeletonRenderer.object.z);
+		skeletonRenderer.object.scaleX = scale;
+		skeletonRenderer.object.scaleY = scale;
+		skeletonRenderer.object.setPosition(position.x, position.y, position.z);
 	}
 
 	override public function onScreenClick(event:hxd.Event):Void {

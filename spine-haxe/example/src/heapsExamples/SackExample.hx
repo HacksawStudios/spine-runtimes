@@ -43,7 +43,10 @@ class SackExample extends Scene {
 	}
 
 	override public function layout():Void {
-		placeRendererCenter(skeletonRenderer, app.engine.width * 0.5, app.engine.height * 0.5, app.engine.width * 0.55, app.engine.height * 0.7);
+		var position = screenToWorld(app.engine.width * 0.5, app.engine.height * 0.5, skeletonRenderer.object.z);
+		skeletonRenderer.object.scaleX = 0.2;
+		skeletonRenderer.object.scaleY = 0.2;
+		skeletonRenderer.object.setPosition(position.x, position.y, position.z);
 	}
 
 	override public function onScreenClick(event:hxd.Event):Void {

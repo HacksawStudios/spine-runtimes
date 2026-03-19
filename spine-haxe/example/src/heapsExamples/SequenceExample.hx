@@ -34,16 +34,22 @@ import spine.heaps.SkeletonRenderer;
 
 class SequenceExample extends Scene {
 	private var skeletonRenderer:SkeletonRenderer;
+	private var layoutWidth = 1.0;
 
 	override public function load():Void {
 		skeletonRenderer = createSkeletonRenderer("assets/dragon.atlas", "assets/dragon-ess.json");
+		layoutWidth = Math.max(1.0, skeletonRenderer.getBounds(false).width);
 		skeletonRenderer.stateData.defaultMix = 0.25;
 		skeletonRenderer.state.setAnimationByName(0, "flying", true);
 		addText("Click anywhere for next scene");
 	}
 
 	override public function layout():Void {
-		placeRendererCenter(skeletonRenderer, app.engine.width * 0.5, app.engine.height * 0.5, app.engine.width * 0.5, app.engine.height * 0.6);
+		var scale = app.engine.width / layoutWidth * 0.5;
+		var position = screenToWorld(app.engine.width * 0.5, app.engine.height * 0.5, skeletonRenderer.object.z);
+		skeletonRenderer.object.scaleX = scale;
+		skeletonRenderer.object.scaleY = scale;
+		skeletonRenderer.object.setPosition(position.x, position.y, position.z);
 	}
 
 	override public function onScreenClick(event:hxd.Event):Void {

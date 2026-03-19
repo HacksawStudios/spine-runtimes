@@ -48,6 +48,7 @@ class ControlBonesExample extends Scene {
 	private static inline var HANDLE_RADIUS = 8.0;
 
 	private var skeletonRenderer:SkeletonRenderer;
+	private var layoutWidth = 1.0;
 	private var controlHandles:Array<ControlHandle> = [];
 	private var activeHandle:Null<ControlHandle> = null;
 	private var dragSkeleton = false;
@@ -59,6 +60,7 @@ class ControlBonesExample extends Scene {
 
 	override public function load():Void {
 		skeletonRenderer = createSkeletonRenderer("assets/stretchyman.atlas", "assets/stretchyman-pro.skel");
+		layoutWidth = Math.max(1.0, skeletonRenderer.getBounds(false).width);
 		skeletonRenderer.stateData.defaultMix = 0.25;
 		skeletonRenderer.state.setAnimationByName(0, "idle", true);
 		addText("Drag the purple circles or Stretchyman.");
@@ -101,7 +103,11 @@ class ControlBonesExample extends Scene {
 	}
 
 	override public function layout():Void {
-		placeRendererBottomCenter(skeletonRenderer, app.engine.width * 0.5, app.engine.height * 0.9, app.engine.width * 0.35, app.engine.height * 0.75);
+		var scale = app.engine.width / layoutWidth * 0.25;
+		var position = screenToWorld(app.engine.width * 0.5, app.engine.height * 0.9, skeletonRenderer.object.z);
+		skeletonRenderer.object.scaleX = scale;
+		skeletonRenderer.object.scaleY = scale;
+		skeletonRenderer.object.setPosition(position.x, position.y, position.z);
 		syncHandlesToBones();
 	}
 
@@ -155,11 +161,6 @@ class ControlBonesExample extends Scene {
 					var dy = nextWorldPoint.y - lastWorldPoint.y;
 					skeletonRenderer.object.x += dx;
 					skeletonRenderer.object.y += dy;
-					for (handle in controlHandles) {
-						handle.screenX += dxScreen;
-						handle.screenY += dyScreen;
-						positionHandle(handle);
-					}
 					lastWorldPoint = nextWorldPoint;
 				}
 				lastScreenX = event.relX;

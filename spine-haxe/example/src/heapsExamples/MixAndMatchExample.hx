@@ -35,6 +35,7 @@ import spine.heaps.SkeletonRenderer;
 
 class MixAndMatchExample extends Scene {
 	private var skeletonRenderer:SkeletonRenderer;
+	private var layoutHeight = 1.0;
 
 	override public function load():Void {
 		skeletonRenderer = createSkeletonRenderer("assets/mix-and-match.atlas", "assets/mix-and-match-pro.json");
@@ -54,12 +55,17 @@ class MixAndMatchExample extends Scene {
 		skeletonRenderer.skeleton.skin = customSkin;
 		skeletonRenderer.skeleton.setSlotsToSetupPose();
 		skeletonRenderer.refresh();
+		layoutHeight = Math.max(1.0, skeletonRenderer.getBounds(false).height);
 		skeletonRenderer.state.setAnimationByName(0, "dance", true);
 		addText("Click anywhere for next scene");
 	}
 
 	override public function layout():Void {
-		placeRendererBottomCenter(skeletonRenderer, app.engine.width * 0.5, app.engine.height * 0.9, app.engine.width * 0.45, app.engine.height * 0.5);
+		var scale = app.engine.height / layoutHeight * 0.5;
+		var position = screenToWorld(app.engine.width * 0.5, app.engine.height * 0.9, skeletonRenderer.object.z);
+		skeletonRenderer.object.scaleX = scale;
+		skeletonRenderer.object.scaleY = scale;
+		skeletonRenderer.object.setPosition(position.x, position.y, position.z);
 	}
 
 	override public function onScreenClick(event:hxd.Event):Void {

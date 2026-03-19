@@ -71,10 +71,11 @@ class SkeletonRenderer {
 
 	/** Creates a renderer for the specified skeleton data. */
 	public function new(skeletonData:SkeletonData, animationStateData:AnimationStateData = null, ?parent:Object) {
-		Bone.yDown = true;
+		Bone.yDown = false;
 		this.object = new Object(parent);
 		this.skeletonData = skeletonData;
 		this.skeleton = new Skeleton(skeletonData);
+		this.skeleton.setToSetupPose();
 		this.skeleton.updateWorldTransform(Physics.update);
 		this.stateData = animationStateData != null ? animationStateData : new AnimationStateData(skeletonData);
 		this.state = new AnimationState(this.stateData);

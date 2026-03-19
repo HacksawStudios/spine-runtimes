@@ -62,13 +62,25 @@ class AnimationBoundExample extends Scene {
 	}
 
 	override public function layout():Void {
-		placeRendererCenter(noClippingRenderer, app.engine.width / 3, app.engine.height * 0.5, app.engine.width * 0.22, app.engine.height * 0.45);
-		placeRendererCenter(clippingRenderer, app.engine.width / 3 * 2, app.engine.height * 0.5, app.engine.width * 0.22, app.engine.height * 0.45);
-		drawScreenRect(noClippingOverlay, getRectScreenRect(noClippingRenderer, noClippingRect), 0xC70000);
-		drawScreenRect(clippingOverlay, getRectScreenRect(clippingRenderer, clippingRect), 0xC70000);
+		var noClippingPosition = screenToWorld(app.engine.width / 3, app.engine.height * 0.5, noClippingRenderer.object.z);
+		noClippingRenderer.object.scaleX = 0.2;
+		noClippingRenderer.object.scaleY = 0.2;
+		noClippingRenderer.object.setPosition(noClippingPosition.x, noClippingPosition.y, noClippingPosition.z);
+		var clippingPosition = screenToWorld(app.engine.width / 3 * 2, app.engine.height * 0.5, clippingRenderer.object.z);
+		clippingRenderer.object.scaleX = 0.2;
+		clippingRenderer.object.scaleY = 0.2;
+		clippingRenderer.object.setPosition(clippingPosition.x, clippingPosition.y, clippingPosition.z);
+		drawBoundsOutline(noClippingOverlay, getRectScreenRect(noClippingRenderer, noClippingRect));
+		drawBoundsOutline(clippingOverlay, getRectScreenRect(clippingRenderer, clippingRect));
 	}
 
 	override public function onScreenClick(event:hxd.Event):Void {
 		SceneManager.getInstance().switchScene(new ControlBonesExample());
+	}
+
+	private function drawBoundsOutline(graphics:Graphics, rect:{xMin:Float, xMax:Float, yMin:Float, yMax:Float}):Void {
+		graphics.clear();
+		graphics.lineStyle(0.5, 0xC70000, 1);
+		graphics.drawRect(rect.xMin, rect.yMin, rect.xMax - rect.xMin, rect.yMax - rect.yMin);
 	}
 }

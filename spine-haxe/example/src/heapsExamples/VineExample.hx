@@ -35,16 +35,22 @@ import spine.heaps.SkeletonRenderer;
 
 class VineExample extends Scene {
 	private var skeletonRenderer:SkeletonRenderer;
+	private var layoutWidth = 1.0;
 
 	override public function load():Void {
 		setBackgroundColor(0xFFFFFF);
 		skeletonRenderer = createSkeletonRenderer("assets/vine.atlas", "assets/vine-pro.json", 1.0, false);
 		skeletonRenderer.skeleton.updateWorldTransform(Physics.none);
 		skeletonRenderer.refresh();
+		layoutWidth = Math.max(1.0, skeletonRenderer.getBounds(false).width);
 	}
 
 	override public function layout():Void {
-		placeRendererCenter(skeletonRenderer, app.engine.width * 0.5, app.engine.height * 0.5, app.engine.width * 0.9, app.engine.height * 0.9);
+		var scale = app.engine.width / layoutWidth;
+		var position = screenToWorld(app.engine.width * 0.5, app.engine.height * 0.5, skeletonRenderer.object.z);
+		skeletonRenderer.object.scaleX = scale;
+		skeletonRenderer.object.scaleY = scale;
+		skeletonRenderer.object.setPosition(position.x, position.y, position.z);
 	}
 
 	override public function onScreenClick(event:hxd.Event):Void {
