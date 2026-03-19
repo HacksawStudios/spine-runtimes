@@ -1,6 +1,6 @@
 # spine-haxe
 
-The spine-haxe runtime provides functionality to load, manipulate and render [Spine](http://esotericsoftware.com) skeletal animation data using [Haxe](https://haxe.org/) in combination with [OpenFL](https://www.openfl.org/) and [Lime](https://lime.openfl.org/).
+The spine-haxe runtime provides functionality to load, manipulate and render [Spine](http://esotericsoftware.com) skeletal animation data using [Haxe](https://haxe.org/) in combination with [OpenFL](https://www.openfl.org/), [Lime](https://lime.openfl.org/), and [Heaps](https://heaps.io/).
 
 For documentation of the core API, please refer to our [Spine Runtimes Guide](http://esotericsoftware.com/spine-runtimes-guide).
 
@@ -26,14 +26,16 @@ spine-haxe supports all Spine features except premultiplied alpha atlases and tw
 The spine-haxe runtime is composed of a core module, that is a Haxe implementation of the renderer-agnostic Spine Runtimes core APIs, and the following specific renderer implementations:
  - [Starling](https://lib.haxe.org/p/starling/)
  - [HaxeFlixel](https://lib.haxe.org/p/flixel/) (minimum supported version 5.9.0)
+ - [Heaps](https://lib.haxe.org/p/heaps/)
 
-The core module of spine-haxe has zero dependencies. The rendering implementation depends on: openfl, starling, and flixel.
-To use spine-haxe you have first to install all the necessary dependencies:
+The core module of spine-haxe has zero dependencies. The rendering implementations depend on framework-specific libraries such as openfl, starling, flixel, and heaps.
+To use spine-haxe you have first to install the dependencies you need:
 
 ```
 haxelib install openfl
 haxelib install starling
 haxelib install flixel
+haxelib install heaps
 ```
 
 Once you have installed the dependencies, you can [download the latest version of spine-haxe](https://esotericsoftware.com/files/spine-haxe/4.2/spine-haxe-latest.zip) and install it:
@@ -54,6 +56,28 @@ lime test html5
 
 This will compile the modules and start a server that serves the example pages at http://127.0.0.1:3000.
 
+For Heaps-specific compile smoke coverage, see `example/src/heapsExamples/CompileSmoke.hx`.
+
+## Heaps
+
+The Heaps renderer lives in the `spine.heaps` package and provides:
+ - `HeapsTextureLoader` to resolve atlas page paths into `h2d.Tile` instances.
+ - `SkeletonMesh` to render a single Spine slot in Heaps.
+ - `SkeletonRenderer` to manage a whole skeleton, including clipping, blend-mode mapping, animation updates, and logical bounds.
+
+A typical Heaps setup looks like this:
+
+```haxe
+var atlas = new TextureAtlas(atlasText, new HeapsTextureLoader(atlasPath, path -> hxd.Res.load(path).toTile()));
+var skeletonData = SkeletonData.from(skeletonJsonText, atlas);
+var stateData = new AnimationStateData(skeletonData);
+var renderer = new spine.heaps.SkeletonRenderer(skeletonData, stateData, parentObject);
+renderer.state.setAnimationByName(0, "walk", true);
+renderer.update(dt);
+```
+
+`HeapsTextureLoader` calls your `tileLoader` callback with each atlas page path, resolved relative to the atlas file path you provide. Atlas disposal only releases page textures when you pass an explicit disposer callback, which allows you to keep using a shared Heaps resource cache when needed.
+
 ## Development
 
 To setup the development environment install the following:
@@ -66,6 +90,7 @@ To setup the development environment install the following:
    haxelib run openfl setup
    haxelib install starling
    haxelib install flixel
+   haxelib install heaps
    ```
 3. Clone the `spine-runtimes` repository, and use `haxelib` to setup a dev library:
    ```
