@@ -25,7 +25,7 @@
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *****************************************************************************/
+*****************************************************************************/
 
 package spine.heaps;
 
@@ -34,12 +34,15 @@ import h2d.Tile;
 import h3d.mat.Data.Compare;
 import h3d.mat.Data.Face;
 import h3d.mat.Material;
+import h3d.mat.Pass;
 import h3d.scene.Mesh;
 import h3d.scene.Object;
 import spine.Color;
 
 /** A Heaps mesh that draws one Spine slot. */
 class SkeletonMesh extends Mesh {
+	private static inline var SLOT_DEPTH_STEP = 0.0001;
+
 	private var geometry:SpineMeshPrimitive;
 	private var heapsMaterial:Material;
 	private var premultiplyAlphaShader:PremultiplyAlphaShader;
@@ -50,21 +53,25 @@ class SkeletonMesh extends Mesh {
 		heapsMaterial.mainPass.enableLights = false;
 		heapsMaterial.mainPass.depthWrite = false;
 		heapsMaterial.mainPass.culling = Face.None;
+		// Keep slot ordering local to the skeleton object instead of using a global pass layer.
+		heapsMaterial.mainPass.layer = 0;
 		premultiplyAlphaShader = new PremultiplyAlphaShader();
 		super(geometry, heapsMaterial, parent);
 	}
 
 	public function setOrder(order:Int):Void {
-		z = 0.0;
-		heapsMaterial.mainPass.layer = order;
+		// Heaps alpha sorting ignores scene-graph child order, so give each slot a tiny
+		// local z offset to keep Spine draw order deterministic without leaking through
+		// global pass layers across sibling skeletons.
+		z = order >= 0 ? order * SLOT_DEPTH_STEP : 0.0;
 	}
 
-	public function apply(tile:Tile, vertices:Array<Float>, uvs:Array<Float>, indices:Array<Int>, slotBlendMode:spine.BlendMode,
+	public function apply(tile:Tile, vertices:Array<Float>, uvs:Array<Float>, indices:Array<Int>, slotBlendMode:spine.BlendMode, premultipliedAlpha:Bool,
 			blendModeOverride:Null<BlendMode>, color:Color):Void {
 		heapsMaterial.texture = tile.getTexture();
-		applyPremultiplyAlpha(slotBlendMode, blendModeOverride);
-		applyBlendMode(slotBlendMode, blendModeOverride);
-		heapsMaterial.color.set(color.r, color.g, color.b, color.a);
+		applyPremultiplyAlpha(slotBlendMode, premultipliedAlpha, blendModeOverride);
+		applyBlendMode(slotBlendMode, premultipliedAlpha, blendModeOverride);
+		applyColor(color, premultipliedAlpha);
 		geometry.applyGeometry(vertices, uvs, indices);
 		visible = indices.length > 0;
 	}
@@ -78,8 +85,8 @@ class SkeletonMesh extends Mesh {
 		geometry.dispose();
 	}
 
-	private function applyPremultiplyAlpha(slotBlendMode:spine.BlendMode, blendModeOverride:Null<BlendMode>):Void {
-		final shouldPremultiply = blendModeOverride == null && slotBlendMode == spine.BlendMode.multiply;
+	private function applyPremultiplyAlpha(slotBlendMode:spine.BlendMode, premultipliedAlpha:Bool, blendModeOverride:Null<BlendMode>):Void {
+		final shouldPremultiply = blendModeOverride == null && slotBlendMode == spine.BlendMode.multiply && !premultipliedAlpha;
 		final hasShader = heapsMaterial.mainPass.getShader(PremultiplyAlphaShader) != null;
 		if (shouldPremultiply && !hasShader)
 			heapsMaterial.mainPass.addShader(premultiplyAlphaShader);
@@ -87,7 +94,7 @@ class SkeletonMesh extends Mesh {
 			heapsMaterial.mainPass.removeShader(premultiplyAlphaShader);
 	}
 
-	private function applyBlendMode(slotBlendMode:spine.BlendMode, blendModeOverride:Null<BlendMode>):Void {
+	private function applyBlendMode(slotBlendMode:spine.BlendMode, premultipliedAlpha:Bool, blendModeOverride:Null<BlendMode>):Void {
 		var pass = heapsMaterial.mainPass;
 		pass.depth(false, Compare.Always);
 		pass.setPassName("alpha");
@@ -96,7 +103,33 @@ class SkeletonMesh extends Mesh {
 			return;
 		}
 
+		if (premultipliedAlpha) {
+			setPremultipliedBlendMode(pass, slotBlendMode);
+			return;
+		}
 		pass.setBlendMode(toBlendMode(slotBlendMode));
+	}
+
+	private function applyColor(color:Color, premultipliedAlpha:Bool):Void {
+		if (premultipliedAlpha)
+			heapsMaterial.color.set(color.r * color.a, color.g * color.a, color.b * color.a, color.a);
+		else
+			heapsMaterial.color.set(color.r, color.g, color.b, color.a);
+	}
+
+	private static function setPremultipliedBlendMode(pass:Pass, slotBlendMode:spine.BlendMode):Void {
+		switch (slotBlendMode) {
+			case normal:
+				pass.setBlendMode(BlendMode.AlphaAdd);
+			case additive:
+				pass.blend(One, One);
+			case multiply:
+				pass.setBlendMode(BlendMode.AlphaMultiply);
+			case screen:
+				pass.setBlendMode(BlendMode.Screen);
+			default:
+				pass.setBlendMode(BlendMode.AlphaAdd);
+		}
 	}
 
 	public static function toBlendMode(spineBlendMode:spine.BlendMode):BlendMode {
@@ -111,14 +144,13 @@ class SkeletonMesh extends Mesh {
 				BlendMode.Screen;
 			default:
 				BlendMode.Alpha;
-		};
+		}
 	}
 }
 
 private class PremultiplyAlphaShader extends hxsl.Shader {
 	static var SRC = {
 		var pixelColor:Vec4;
-
 		function fragment() {
 			pixelColor.rgb *= pixelColor.a;
 		}

@@ -162,7 +162,7 @@ class SkeletonRenderer {
 			}
 
 			slotMesh.apply(renderData.texture, renderData.vertices, renderData.uvs, renderData.indices, renderData.blendMode,
-				blendModeOverride, renderData.color);
+				renderData.premultipliedAlpha, blendModeOverride, renderData.color);
 			clipper.clipEndWithSlot(slot);
 		}
 
@@ -193,15 +193,16 @@ class SkeletonRenderer {
 			indices = clipper.clippedTriangles;
 			uvs = clipper.clippedUvs;
 		}
-		return {
-			texture: resolveAttachmentTile(regionAttachment.region),
-			vertices: worldVertices,
-			uvs: uvs,
-			indices: indices,
-			blendMode: slot.data.blendMode,
-			color: multiplyColor(skeleton.color, slot.color, regionAttachment.color)
-		};
-	}
+			return {
+				texture: resolveAttachmentTile(regionAttachment.region),
+				vertices: worldVertices,
+				uvs: uvs,
+				indices: indices,
+				blendMode: slot.data.blendMode,
+				premultipliedAlpha: resolvePremultipliedAlpha(regionAttachment.region),
+				color: multiplyColor(skeleton.color, slot.color, regionAttachment.color)
+			};
+		}
 
 	private function buildMeshRenderData(slot:spine.Slot, meshAttachment:MeshAttachment, clipper:SkeletonClipping):SkeletonRenderData {
 		var verticesLength = meshAttachment.worldVerticesLength;
@@ -216,15 +217,16 @@ class SkeletonRenderer {
 			indices = clipper.clippedTriangles;
 			uvs = clipper.clippedUvs;
 		}
-		return {
-			texture: resolveAttachmentTile(meshAttachment.region),
-			vertices: worldVertices,
-			uvs: uvs,
-			indices: indices,
-			blendMode: slot.data.blendMode,
-			color: multiplyColor(skeleton.color, slot.color, meshAttachment.color)
-		};
-	}
+			return {
+				texture: resolveAttachmentTile(meshAttachment.region),
+				vertices: worldVertices,
+				uvs: uvs,
+				indices: indices,
+				blendMode: slot.data.blendMode,
+				premultipliedAlpha: resolvePremultipliedAlpha(meshAttachment.region),
+				color: multiplyColor(skeleton.color, slot.color, meshAttachment.color)
+			};
+		}
 
 	private function resolveAttachmentTile(region:TextureRegion):Tile {
 		if (region == null)
@@ -237,6 +239,14 @@ class SkeletonRenderer {
 				return cast atlasRegion.page.texture;
 		}
 		throw new spine.SpineException("Attachment region does not contain a Heaps tile.");
+	}
+
+	private static function resolvePremultipliedAlpha(region:TextureRegion):Bool {
+		if (Std.isOfType(region, TextureAtlasRegion)) {
+			var atlasRegion:TextureAtlasRegion = cast region;
+			return atlasRegion.page != null && atlasRegion.page.pma;
+		}
+		return false;
 	}
 
 	private function updateLogicalSize():Void {
@@ -268,5 +278,6 @@ private typedef SkeletonRenderData = {
 	var uvs:Array<Float>;
 	var indices:Array<Int>;
 	var blendMode:spine.BlendMode;
+	var premultipliedAlpha:Bool;
 	var color:Color;
 };
