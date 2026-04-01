@@ -32,6 +32,9 @@ package spine.attachments;
 import spine.Color;
 import spine.atlas.TextureAtlasRegion;
 import spine.atlas.TextureAtlasPage;
+#if heaps
+import h2d.Tile;
+#end
 
 /** An attachment that displays a textured mesh. A mesh has hull vertices and internal vertices within the hull. Holes are not
  * supported. Each vertex has UVs (texture coordinates) and triangles are used to map an image on to the mesh.
@@ -88,6 +91,16 @@ class MeshAttachment extends VertexAttachment implements HasTextureRegion {
 		if (Std.isOfType(region, TextureAtlasRegion)) {
 			var atlasRegion:TextureAtlasRegion = cast(region, TextureAtlasRegion), page:TextureAtlasPage = atlasRegion.page;
 			var textureWidth = page.width, textureHeight = page.height;
+			#if heaps
+			if (Std.isOfType(page.texture, Tile)) {
+				var pageTile:Tile = cast page.texture;
+				var texture = pageTile.getTexture();
+				if (texture != null) {
+					textureWidth = texture.width;
+					textureHeight = texture.height;
+				}
+			}
+			#end
 			switch (atlasRegion.degrees) {
 				case 90:
 					u -= (region.originalHeight - region.offsetY - region.height) / textureWidth;
